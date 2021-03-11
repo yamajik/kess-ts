@@ -44,9 +44,8 @@ export class App {
       return {
         name: p.dir,
         version: p.name,
-        fn: imports.importFile<{ default: Function }>(
-          path.join(functionsFolder, i)
-        ).default
+        fn: imports.file<{ default: Function }>(path.join(functionsFolder, i))
+          .default
       };
     });
   }

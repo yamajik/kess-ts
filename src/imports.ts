@@ -1,24 +1,68 @@
 import * as fs from "fs";
-import * as ts from "typescript";
+import * as path from "path";
+import * as typescript from "typescript";
 import * as vm2 from "vm2";
 
-export function importString<T>(code: string, filename: string = ""): T {
-  const vm = new vm2.NodeVM({
-    require: {
-      external: true,
-      builtin: ["*"]
-    },
-    compiler: (code: string, filename: string) =>
-      ts.transpileModule(code, {
-        compilerOptions: {
-          target: ts.ScriptTarget.ES2016,
-          module: ts.ModuleKind.CommonJS
-        }
-      }).outputText
-  });
-  return vm.run(code, filename);
+export class Importer {
+  private _vm: vm2.NodeVM;
+
+  get vm(): vm2.NodeVM {
+    if (!this._vm) {
+      this._vm = this.createVM();
+    }
+    return this._vm;
+  }
+
+  createVM(options?: vm2.NodeVMOptions): vm2.NodeVM {
+    const opts = {
+      require: {
+        external: true,
+        builtin: ["*"]
+      },
+      ...options
+    };
+    return new vm2.NodeVM(opts);
+  }
+
+  file<T>(filename: string): T {
+    switch (path.parse(filename).ext) {
+      case ".ts":
+        return this.ts<T>(fs.readFileSync(filename).toString());
+      default:
+        return this.js<T>(fs.readFileSync(filename).toString());
+    }
+  }
+
+  js<T>(code: string): T {
+    const script = new vm2.VMScript(code);
+    return this.vm.run(script);
+  }
+
+  ts<T>(code: string): T {
+    const script = new vm2.VMScript(code, { compiler: this.tscompile });
+    return this.vm.run(script);
+  }
+
+  tscompile(code: string, filename: string): string {
+    return typescript.transpileModule(code, {
+      compilerOptions: {
+        target: typescript.ScriptTarget.ES2016,
+        module: typescript.ModuleKind.CommonJS
+      }
+    }).outputText;
+  }
 }
 
-export function importFile<T>(filename: string): T {
-  return importString(fs.readFileSync(filename).toString(), filename);
+const _importer = new Importer();
+
+export function file<T>(filename: string): T {
+  return _importer.file(filename);
+}
+
+export function js<T>(code: string): T {
+  return _importer.js(code);
+}
+
+export function ts<T>(code: string): T {
+  return _importer.ts(code);
 }
