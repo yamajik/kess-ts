@@ -1,4 +1,5 @@
 import * as express from "express";
+import * as expressRoutes from "express-list-routes";
 import * as glob from "glob";
 import * as path from "path";
 import * as env from "./env";
@@ -15,6 +16,10 @@ export interface AppOptions {
   functionsFolder?: string;
   runtimePrefix?: string;
   runtimeName?: string;
+}
+
+export interface AppStartOptions {
+  port?: number;
 }
 
 export class App {
@@ -39,7 +44,9 @@ export class App {
       return {
         name: p.dir,
         version: p.name,
-        fn: imports.importFile(path.join(functionsFolder, i))
+        fn: imports.importFile<{ default: Function }>(
+          path.join(functionsFolder, i)
+        ).default
       };
     });
   }
@@ -61,8 +68,13 @@ export class App {
     );
   }
 
-  start() {
+  start(options?: AppStartOptions) {
+    const opts = {
+      port: 3000,
+      ...options
+    };
     this.setup();
-    this.app.listen();
+    this.app.listen(opts.port);
+    expressRoutes(this.app);
   }
 }

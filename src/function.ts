@@ -22,6 +22,6 @@ export class Function {
   }
 
   h(...handlers: express.RequestHandler[]) {
-    return this.h(...handlers);
+    return this.handle(...handlers);
   }
 }
