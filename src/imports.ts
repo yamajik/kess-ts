@@ -43,13 +43,19 @@ export class Importer {
     return this.vm.run(script);
   }
 
-  tscompile(code: string, filename: string): string {
-    return typescript.transpileModule(code, {
+  tscompile(
+    code: string,
+    filename: string,
+    options?: typescript.TranspileOptions
+  ): string {
+    const opts = {
       compilerOptions: {
         target: typescript.ScriptTarget.ES2016,
         module: typescript.ModuleKind.CommonJS
-      }
-    }).outputText;
+      },
+      ...options
+    };
+    return typescript.transpileModule(code, opts).outputText;
   }
 }
 
