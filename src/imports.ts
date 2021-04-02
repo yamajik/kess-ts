@@ -1,4 +1,5 @@
 import * as fs from "fs";
+import { createRequire } from "module";
 import * as path from "path";
 import * as typescript from "typescript";
 import * as vm2 from "vm2";
@@ -51,11 +52,18 @@ export class Importer {
     const opts = {
       compilerOptions: {
         target: typescript.ScriptTarget.ES2016,
-        module: typescript.ModuleKind.CommonJS
+        module: typescript.ModuleKind.CommonJS,
+        experimentalDecorators: true
       },
       ...options
     };
     return typescript.transpileModule(code, opts).outputText;
+  }
+
+  requires<T>(filename: string): T {
+    const abspath = path.resolve(filename);
+    const { name } = path.parse(abspath);
+    return createRequire(abspath)(`./${name}`);
   }
 }
 
@@ -71,4 +79,8 @@ export function js<T>(code: string): T {
 
 export function ts<T>(code: string): T {
   return _importer.ts(code);
+}
+
+export function requires<T>(code: string): T {
+  return _importer.requires(code);
 }

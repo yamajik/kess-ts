@@ -1,15 +1,14 @@
 import * as express from "express";
-import * as expressRoutes from "express-list-routes";
+import * as expressListEndpoints from "express-list-endpoints";
 import * as glob from "glob";
 import * as path from "path";
 import * as env from "./env";
-import { Function } from "./function";
+import * as fn from "./function";
 import * as imports from "./imports";
+import * as utils from "./utils";
 
-export interface ScanFunctionResult {
-  name: string;
-  version: string;
-  fn: Function;
+export interface Module {
+  [key: string]: any;
 }
 
 export interface AppOptions {
@@ -36,35 +35,31 @@ export class App {
     };
   }
 
-  scanFuntions(functionsFolder: string): ScanFunctionResult[] {
+  scanFuntions(functionsFolder: string): Module[] {
     return new glob.GlobSync(path.join("*", "*.ts"), {
       cwd: functionsFolder
-    }).found.map(i => {
-      const p = path.parse(i);
-      return {
-        name: p.dir,
-        version: p.name,
-        fn: imports.file<{ default: Function }>(path.join(functionsFolder, i))
-          .default
-      };
-    });
+    }).found.map(i => imports.requires<Module>(path.join(functionsFolder, i)));
   }
 
-  setupFunction({ name, version, fn }: ScanFunctionResult, prefix = "") {
-    this.app.use(`${prefix}/${name}/${version}`, fn.router);
+  setupFunction(module: Module) {
+    for (const [k, v] of Object.entries(module)) {
+      if (k.startsWith("_") || !utils.isclass(v)) {
+        continue;
+      }
+      if (fn.isFunctionClass(v)) {
+        this.app.use(fn.create(v));
+      }
+    }
   }
 
-  setupFunctions(functionsFolder: string, prefix = "") {
+  setupFunctions(functionsFolder: string) {
     this.scanFuntions(functionsFolder).forEach(r => {
-      this.setupFunction(r, prefix);
+      this.setupFunction(r);
     });
   }
 
   setup() {
-    this.setupFunctions(
-      this.options.functionsFolder,
-      this.options.runtimePrefix
-    );
+    this.setupFunctions(this.options.functionsFolder);
   }
 
   start(options?: AppStartOptions) {
@@ -74,6 +69,8 @@ export class App {
     };
     this.setup();
     this.app.listen(opts.port);
-    expressRoutes(this.app);
+    expressListEndpoints(this.app).forEach(e => {
+      console.log(`[${e.methods.join("|")}] ${e.path}`);
+    });
   }
 }

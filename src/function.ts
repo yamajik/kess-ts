@@ -1,27 +1,42 @@
 import * as express from "express";
+import * as invocation from "./invocation";
+
+const KESS_FUNCTION_KEY = "__kess_function_key__",
+  KESS_FUNCTION_ID = "kess-function-id";
 
 export class Function {
-  router: express.Router;
-  state: { [key: string]: any };
+  static [KESS_FUNCTION_KEY] = KESS_FUNCTION_ID;
+}
 
-  constructor() {
-    this.router = express.Router();
-    this.state = {};
-  }
+export interface FunctionMethod {
+  (name?: string): MethodDecorator;
+}
 
-  get(path: string, ...handlers: express.RequestHandler[]) {
-    return this.router.get(path, ...handlers);
-  }
+export const method: FunctionMethod = (() => {
+  const wrap = () => (name?: string) => (
+    target: any,
+    propertyKey: string,
+    descriptor: TypedPropertyDescriptor<any>
+  ) => {
+    return invocation.method.put(`/${name || propertyKey}`)(
+      target,
+      propertyKey,
+      descriptor
+    );
+  };
 
-  post(path: string, ...handlers: express.RequestHandler[]) {
-    return this.router.post(path, ...handlers);
-  }
+  const _f: any = wrap();
+  return _f;
+})();
 
-  handle(...handlers: express.RequestHandler[]) {
-    return this.router.post("/", handlers);
-  }
+export function create(obj: typeof Function, name?: string): express.Router {
+  return createRouter(new obj(), name || obj.name);
+}
 
-  h(...handlers: express.RequestHandler[]) {
-    return this.handle(...handlers);
-  }
+export function createRouter(obj: Function, name: string): express.Router {
+  return invocation.createRouter(obj, name);
+}
+
+export function isFunctionClass(obj: any): boolean {
+  return obj[KESS_FUNCTION_KEY] === KESS_FUNCTION_ID;
 }

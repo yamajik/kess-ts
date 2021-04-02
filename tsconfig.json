@@ -2,11 +2,12 @@
     "compileOnSave": true,
     "compilerOptions": {
         "baseUrl": "./",
-        "target": "ES2016",
-        "outDir": "dist",
         "declaration": true,
+        "experimentalDecorators": true,
         "module": "commonjs",
-        "moduleResolution": "Node"
+        "moduleResolution": "Node",
+        "outDir": "dist",
+        "target": "ES2016"
     },
     "include": [
         "src"
