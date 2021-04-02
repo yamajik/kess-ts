@@ -39,6 +39,7 @@ export function create(obj: typeof Invocation, name?: string): express.Router {
 
 export function createRouter(obj: Invocation, name: string): express.Router {
   const router = express.Router();
+  router.use(express.json());
   for (const k of Object.getOwnPropertyNames(Object.getPrototypeOf(obj))) {
     const v = obj[k];
     if (
@@ -48,7 +49,14 @@ export function createRouter(obj: Invocation, name: string): express.Router {
     ) {
       const path = `/${name}${v.__invocationpath__ || ""}`,
         method = v.__invocationmethod__.toLowerCase();
-      router[method](path, v);
+      router[method](path, async (req, res) => {
+        try {
+          res.json(await v.bind(obj)(req.body));
+        } catch (err) {
+          res.status(500).send({ error: err.toString() });
+          throw err;
+        }
+      });
     }
   }
   return router;
