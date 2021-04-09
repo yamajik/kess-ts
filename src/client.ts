@@ -21,7 +21,7 @@ export class Client {
     };
   }
 
-  client(): dapr.dapr_grpc.DaprClient {
+  get client(): dapr.dapr_grpc.DaprClient {
     if (!this._client) {
       this._client = new dapr.dapr_grpc.DaprClient(
         `${this.options.host}:${this.options.port}`,
@@ -31,33 +31,56 @@ export class Client {
     return this._client;
   }
 
-  create_random_id(): string {
+  actor(type: string): Actor {
+    return new Actor(this.client, type);
+  }
+}
+
+export class ActorID {
+  id: string;
+
+  constructor(id?: string) {
+    this.id = id || this.createRamdomID();
+  }
+
+  createRamdomID(): string {
     const buffer = Buffer.alloc(16);
     uuid.v1({}, buffer);
     return buffer.toString("hex");
   }
 
-  async invoke(
-    actorType: string,
-    actorMethod: string,
-    data?: any,
-    options?: Client.InvocakeOptions
-  ): Promise<any> {
+  toString() {
+    return this.id;
+  }
+
+  static random(): ActorID {
+    return new ActorID();
+  }
+}
+
+class Actor {
+  client: dapr.dapr_grpc.DaprClient;
+  type: string;
+
+  constructor(client: dapr.dapr_grpc.DaprClient, type: string) {
+    this.client = client;
+    this.type = type;
+  }
+
+  invoke(method: string, data?: any, options?: Actor.InvokeOptions) {
     const opts = {
       ...options
     };
     const req = new dapr.dapr_pb.InvokeActorRequest();
-    req.setActorType(actorType).setMethod(actorMethod);
-    if (opts.id) {
-      req.setActorId(opts.id);
-    } else {
-      req.setActorId(this.create_random_id());
-    }
+    req
+      .setActorType(this.type)
+      .setMethod(method)
+      .setActorId(new ActorID(opts.id).toString());
     if (data) {
       req.setData(Buffer.from(JSON.stringify(data), "utf-8"));
     }
     return new Promise<any>((resolve, reject) => {
-      this.client().invokeActor(req, (err, res) => {
+      this.client.invokeActor(req, (err, res) => {
         if (err) {
           reject(err);
           return;
@@ -68,8 +91,8 @@ export class Client {
   }
 }
 
-export namespace Client {
-  export interface InvocakeOptions {
+export namespace Actor {
+  export interface InvokeOptions {
     id?: string;
   }
 }
