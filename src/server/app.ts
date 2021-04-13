@@ -1,6 +1,6 @@
 import * as express from "express";
 import * as expressListEndpoints from "express-list-endpoints";
-import * as env from "./env";
+import * as env from "../env";
 import * as extensions from "./extensions";
 
 export class App {
@@ -20,7 +20,7 @@ export class App {
     this.extensions.set("pubsub", new extensions.PubSub(this));
     this.extensions.set(
       "functions",
-      new extensions.Functions(this, { path: this.options.functionsFolder })
+      new extensions.Modules(this, { path: this.options.functionsFolder })
     );
   }
 

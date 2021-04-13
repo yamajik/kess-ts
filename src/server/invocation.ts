@@ -1,9 +1,10 @@
 import * as express from "express";
-import * as utils from "./utils";
+import * as utils from "../utils";
+import * as module from "./module";
 
-export class Invocation {}
+export const OPTIONS_KEY = "__invocation_options__";
 
-export interface InvocationMethod {
+export interface Method {
   (path?: string): MethodDecorator;
 
   get: (path?: string) => MethodDecorator;
@@ -13,14 +14,19 @@ export interface InvocationMethod {
   delete: (path?: string) => MethodDecorator;
 }
 
-export const method: InvocationMethod = (() => {
-  const wrap = (method: string) => (path?: string) => (
+export interface MethodOptions {
+  path?: string;
+}
+
+export const method: Method = (() => {
+  const wrap = (method: string) => (options?: MethodOptions) => (
     target: any,
     propertyKey: string,
     descriptor: TypedPropertyDescriptor<any>
   ) => {
-    descriptor.value.__invocationmethod__ = method;
-    descriptor.value.__invocationpath__ = path || `/${propertyKey}`;
+    descriptor.value[OPTIONS_KEY] = {
+      ...options
+    };
     return descriptor;
   };
 
@@ -33,28 +39,27 @@ export const method: InvocationMethod = (() => {
   return _f;
 })();
 
-export function create(obj: typeof Invocation, name?: string): express.Router {
-  return createRouter(new obj(), name || obj.name);
+export interface CreateResult {
+  router: express.Router;
 }
 
-export function createRouter(obj: Invocation, name: string): express.Router {
+export function create(obj: module.Module, name: string): CreateResult {
   const router = express.Router();
   router.use(express.json({ type: "application/json" }));
-  router.use(express.json({ type: "application/*+json" }));
   for (const k of Object.getOwnPropertyNames(Object.getPrototypeOf(obj))) {
     const v = obj[k];
     if (
       !k.startsWith("_") &&
       utils.callable(v) &&
-      v.hasOwnProperty("__invocationmethod__")
+      v.hasOwnProperty(OPTIONS_KEY)
     ) {
-      const path = `/${name}${v.__invocationpath__ || ""}`,
-        method = v.__invocationmethod__.toLowerCase();
+      const opts = v[OPTIONS_KEY],
+        path = `/${name}${opts.path}`,
+        method = opts.method.toLowerCase();
       router[method](path, async (req, res) => {
         try {
           const result = await v.bind(obj)(req.body, { req, res });
           if (result) res.json(result);
-          res.json();
         } catch (err) {
           res.status(500).send({ error: err.toString() });
           throw err;
@@ -62,5 +67,5 @@ export function createRouter(obj: Invocation, name: string): express.Router {
       });
     }
   }
-  return router;
+  return { router };
 }
