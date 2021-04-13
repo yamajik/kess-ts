@@ -5,13 +5,13 @@ import * as module from "./module";
 export const OPTIONS_KEY = "__invocation_options__";
 
 export interface Method {
-  (path?: string): MethodDecorator;
+  (options?: MethodOptions): MethodDecorator;
 
-  get: (path?: string) => MethodDecorator;
-  post: (path?: string) => MethodDecorator;
-  put: (path?: string) => MethodDecorator;
-  update: (path?: string) => MethodDecorator;
-  delete: (path?: string) => MethodDecorator;
+  get: (options?: MethodOptions) => MethodDecorator;
+  post: (options?: MethodOptions) => MethodDecorator;
+  put: (options?: MethodOptions) => MethodDecorator;
+  update: (options?: MethodOptions) => MethodDecorator;
+  delete: (options?: MethodOptions) => MethodDecorator;
 }
 
 export interface MethodOptions {
@@ -25,6 +25,7 @@ export const method: Method = (() => {
     descriptor: TypedPropertyDescriptor<any>
   ) => {
     descriptor.value[OPTIONS_KEY] = {
+      method,
       ...options
     };
     return descriptor;
@@ -59,7 +60,9 @@ export function create(obj: module.Module, name: string): CreateResult {
       router[method](path, async (req, res) => {
         try {
           const result = await v.bind(obj)(req.body, { req, res });
-          if (result) res.json(result);
+          if (result) {
+            return res.json(result);
+          }
         } catch (err) {
           res.status(500).send({ error: err.toString() });
           throw err;

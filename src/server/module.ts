@@ -28,7 +28,11 @@ export const method: ModuleMethod = (() => {
       name: propertyKey,
       ...options
     };
-    invocation.method.put(`/${opts.name}`)(target, propertyKey, descriptor);
+    invocation.method.put({ path: `/${opts.name}` })(
+      target,
+      propertyKey,
+      descriptor
+    );
     return descriptor;
   };
 
@@ -36,24 +40,8 @@ export const method: ModuleMethod = (() => {
   return _f;
 })();
 
-export interface ModuleSubscribe {
-  (options: pubsub.SubscribeOptions): MethodDecorator;
-}
-
-export const subscribe: ModuleSubscribe = (() => {
-  const wrap = () => (options: pubsub.SubscribeOptions) => (
-    target: any,
-    propertyKey: string,
-    descriptor: TypedPropertyDescriptor<any>
-  ) => {
-    const opts = { ...options };
-    pubsub.subscribe(opts);
-    return descriptor;
-  };
-
-  const _f: any = wrap();
-  return _f;
-})();
+export type ModuleSubscribe = pubsub.Subscribe;
+export const subscribe = pubsub.subscribe;
 
 export interface CreateResult {
   routers: express.Router[];

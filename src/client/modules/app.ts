@@ -26,7 +26,7 @@ export class App extends base.Module {
         new dapr.common_pb.InvokeRequest()
           .setHttpExtension(
             new dapr.common_pb.HTTPExtension().setVerb(
-              dapr.common_pb.HTTPExtension.Verb.POST
+              dapr.common_pb.HTTPExtension.Verb.PUT
             )
           )
           .setMethod(method)

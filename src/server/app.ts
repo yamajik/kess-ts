@@ -11,7 +11,7 @@ export class App {
   constructor(options?: App.Options) {
     this.router = express();
     this.options = {
-      functionsFolder: env.FN_FOLDER,
+      functionsFolder: env.MODULE_FOLDER,
       runtimePrefix: env.RUNTIME_PREFIX,
       runtimeName: env.RUNTIME_NAME,
       ...options

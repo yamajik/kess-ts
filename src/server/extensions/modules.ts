@@ -3,6 +3,7 @@ import * as path from "path";
 import * as imports from "../../imports";
 import * as utils from "../../utils";
 import * as app from "../app";
+import * as appmodule from "../module";
 import * as base from "./base";
 
 export class Modules extends base.Extension {
@@ -30,8 +31,8 @@ export class Modules extends base.Extension {
       if (k.startsWith("_") || !utils.isclass(v)) {
         continue;
       }
-      if (module.isModuleClass(v)) {
-        const { routers, subscribers } = module.create(v);
+      if (appmodule.isModuleClass(v)) {
+        const { routers, subscribers } = appmodule.create(v);
         for (const router of routers) {
           this.app.router.use(router);
         }

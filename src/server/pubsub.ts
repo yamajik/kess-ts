@@ -6,8 +6,22 @@ import * as module from "./module";
 export const OPTIONS_KEY = "__pubsub_options__";
 export const DEFAULT_NAME = "pubsub";
 
+export type SubscribeStatus = string;
+export const SUBSCRIBE_SUCCESS: SubscribeStatus = "SUCCESS";
+export const SUBSCRIBE_RETRY: SubscribeStatus = "RETRY";
+export const SUBSCRIBE_DROP: SubscribeStatus = "DROP";
+
+export interface SubscribeResult {
+  status: SubscribeStatus | string;
+}
+
 export interface Subscribe {
   (options: SubscribeOptions): MethodDecorator;
+
+  success(): SubscribeResult;
+  retry(): SubscribeResult;
+  drop(): SubscribeResult;
+  others(msg: string): SubscribeResult;
 }
 
 export interface SubscribeOptions {
@@ -25,7 +39,7 @@ export const subscribe: Subscribe = (() => {
   ) => {
     descriptor.value[OPTIONS_KEY] = {
       name: DEFAULT_NAME,
-      path: propertyKey,
+      path: `/${propertyKey}`,
       method: "POST",
       ...options
     };
@@ -33,6 +47,10 @@ export const subscribe: Subscribe = (() => {
   };
 
   const _f: any = wrap();
+  _f.success = () => ({ status: SUBSCRIBE_SUCCESS });
+  _f.retry = () => ({ status: SUBSCRIBE_RETRY });
+  _f.drop = () => ({ status: SUBSCRIBE_DROP });
+  _f.others = (msg: string) => ({ status: msg });
   return _f;
 })();
 
@@ -58,10 +76,11 @@ export function create(obj: module.Module, name: string): CreateResult {
       router[method](path, async (req, res) => {
         try {
           const result = await v.bind(obj)(req.body, { req, res });
-          if (result) res.json(result);
-          res.json();
+          if (!result) {
+            return res.json(subscribe.success());
+          }
         } catch (err) {
-          res.status(500).send({ error: err.toString() });
+          res.json(subscribe.others(err.toString()));
           throw err;
         }
       });
